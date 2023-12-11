@@ -1,0 +1,7 @@
+require 'dav4rack/card_dav/resource'
+require 'dav4rack/card_dav/principal_resource'
+require 'dav4rack/card_dav/home_set_resource'
+require 'dav4rack/card_dav/address_book_resource'
+require 'dav4rack/card_dav/contact_resource'
+require 'dav4rack/card_dav/controller'
+require 'dav4rack/card_dav/handler'
