@@ -15,14 +15,14 @@ module DAV4Rack
 
       def get_property(element)
         case element[:name]
-        when "current-user-principal"
-          @options[:root_uri_path]
         when "principal-URL"
-          @options[:root_uri_path]
+          URI.parse(@options[:root_uri_path])
+        when "current-user-principal"
+          URI.parse(@options[:root_uri_path])
         when "acl"
           acl
         when "acl-restrictions"
-          acl_restrictions
+          [ :"grant-only", :"no-invert" ]
         when "displayname"
           "Principal Resource"
         when "creationdate"
@@ -39,11 +39,19 @@ module DAV4Rack
       private
 
       def acl
-        
-      end
-
-      def acl_restrictions
-        
+        render_xml(:acl) do |xml|
+          xml.ace do
+            xml.principal do
+              xml.href @options[:root_uri_path]
+            end
+            xml.protected
+            xml.grant do
+              xml.privilege "read"
+              xml.privilege "read-acl"
+              xml.privilege "read-current-user-privilege-set"
+            end
+          end
+        end
       end
     end
   end

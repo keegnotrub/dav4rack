@@ -45,6 +45,12 @@ RSpec.describe DAV4Rack::CardDAV::Handler do
   def response_xml
     Nokogiri.XML(@response.body)
   end
+
+  def multistatus_response(pattern)
+    expect(@response).to be_multi_status
+    expect(response_xml.xpath('//D:multistatus/D:response', response_xml.root.namespaces)).not_to be_empty
+    response_xml.xpath("//D:multistatus/D:response#{pattern}", response_xml.root.namespaces)    
+  end
   
   def propfind_xml(*props)
     render(:propfind) do |xml|
@@ -59,7 +65,26 @@ RSpec.describe DAV4Rack::CardDAV::Handler do
   describe '[4] Principal Properties' do
     it '[4.2] DAV:principal-URL' do
       propfind('/', :input => propfind_xml(:"principal-URL"))
-      expect(@response).not_to be_empty
+      expect(multistatus_response("/D:propstat/D:prop/D:principal-URL/D:href").first.text).to eq('/')
+    end
+  end
+
+  describe '[5] Access Control Properties' do
+    describe '[5.5] DAV::ACL Element' do
+      it '[5.5.1] ACE Principal' do
+        propfind('/', :input => propfind_xml(:acl))
+        expect(multistatus_response("/D:propstat/D:prop/D:acl/D:ace/D:principal/D:href").first.text).to eq('/')
+      end
+    end
+
+    it '[5.1]  DAV:owner' do
+      propfind('/', :input => propfind_xml(:owner))
+      expect(multistatus_response("/D:propstat/D:prop/D:owner/D:href").first.text).to eq('/')
+    end
+
+    it '[5.2]  DAV:group' do
+      propfind('/', :input => propfind_xml(:group))
+      expect(multistatus_response("/D:propstat/D:prop/D:group").first.text).to eq('')
     end
   end
 end
