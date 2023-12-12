@@ -1,6 +1,8 @@
 module DAV4Rack
   module CardDAV
     class Resource < DAV4Rack::Resource
+      PRIVILEGES = ["read", "read-acl", "read-current-user-privilege-set"].freeze
+      
       def get_property(element)
         case element[:name]
         when "current-user-privilege-set"
@@ -30,9 +32,11 @@ module DAV4Rack
 
       def current_user_privilege_set
         render_xml(:"current-user-privilege-set") do |xml|
-          xml.privilege "read"
-          xml.privilege "read-acl"
-          xml.privilege "read-current-user-privilege-set"
+          PRIVILEGES.each do |privilege|
+            xml.privilege do
+              xml.send(privilege)
+            end
+          end
         end
       end
     end

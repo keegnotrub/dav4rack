@@ -41,7 +41,7 @@ RSpec.describe DAV4Rack::CardDAV::Handler do
     end
     doc.to_xml
   end
- 
+  
   def response_xml
     Nokogiri.XML(@response.body)
   end
@@ -62,29 +62,62 @@ RSpec.describe DAV4Rack::CardDAV::Handler do
     end
   end
 
-  describe '[4] Principal Properties' do
-    it '[4.2] DAV:principal-URL' do
-      propfind('/', :input => propfind_xml(:"principal-URL"))
-      expect(multistatus_response("/D:propstat/D:prop/D:principal-URL/D:href").first.text).to eq('/')
-    end
-  end
-
-  describe '[5] Access Control Properties' do
-    describe '[5.5] DAV::ACL Element' do
-      it '[5.5.1] ACE Principal' do
-        propfind('/', :input => propfind_xml(:acl))
-        expect(multistatus_response("/D:propstat/D:prop/D:acl/D:ace/D:principal/D:href").first.text).to eq('/')
+  context "RFC 3744: WebDav Access Control Protocol" do
+    describe '[4] Principal Properties' do
+      it '[4.2] DAV:principal-URL' do
+        propfind('/', :input => propfind_xml(:"principal-URL"))
+        expect(multistatus_response("/D:propstat/D:prop/D:principal-URL/D:href").first.text).to eq('/')
       end
     end
 
-    it '[5.1]  DAV:owner' do
-      propfind('/', :input => propfind_xml(:owner))
-      expect(multistatus_response("/D:propstat/D:prop/D:owner/D:href").first.text).to eq('/')
-    end
+    describe '[5] Access Control Properties' do
+      it '[5.1]  DAV:owner' do
+        propfind('/', :input => propfind_xml(:owner))
+        expect(multistatus_response("/D:propstat/D:prop/D:owner/D:href").first.text).to eq('/')
+      end
 
-    it '[5.2]  DAV:group' do
-      propfind('/', :input => propfind_xml(:group))
-      expect(multistatus_response("/D:propstat/D:prop/D:group").first.text).to eq('')
+      it '[5.2] DAV:group' do
+        propfind('/', :input => propfind_xml(:group))
+        expect(multistatus_response("/D:propstat/D:prop/D:group").first.text).to eq('')
+      end
+
+      it '[5.4] DAV:current-user-privilege-set' do
+        propfind('/', :input => propfind_xml(:"current-user-privilege-set"))
+        expect(multistatus_response("/D:propstat/D:prop/D:current-user-privilege-set/D:privilege/D:read")).not_to be_empty
+        expect(multistatus_response("/D:propstat/D:prop/D:current-user-privilege-set/D:privilege/D:read-acl")).not_to be_empty
+        expect(multistatus_response("/D:propstat/D:prop/D:current-user-privilege-set/D:privilege/D:read-current-user-privilege-set")).not_to be_empty
+      end
+
+      describe '[5.5] DAV:acl' do
+        it '[5.5.1] ACE Principal' do
+          propfind('/', :input => propfind_xml(:acl))
+          expect(multistatus_response("/D:propstat/D:prop/D:acl/D:ace/D:principal/D:href").first.text).to eq('/')
+        end
+        it '[5.5.2] ACE Grant and Deny' do
+          propfind('/', :input => propfind_xml(:acl))
+          expect(multistatus_response("/D:propstat/D:prop/D:acl/D:ace/D:grant/D:privilege/D:read")).not_to be_empty
+          expect(multistatus_response("/D:propstat/D:prop/D:acl/D:ace/D:grant/D:privilege/D:read-acl")).not_to be_empty
+          expect(multistatus_response("/D:propstat/D:prop/D:acl/D:ace/D:grant/D:privilege/D:read-current-user-privilege-set")).not_to be_empty
+        end
+      end
+
+      describe '[5.6] DAV:acl-restrictions' do
+        it '[5.6.1] DAV:grant-only' do
+          propfind('/', :input => propfind_xml(:"acl-restrictions"))
+          expect(multistatus_response("/D:propstat/D:prop/D:acl-restrictions/D:grant-only")).not_to be_empty
+        end
+        it '[5.6.2] DAV:no-invert' do
+          propfind('/', :input => propfind_xml(:"acl-restrictions"))
+          expect(multistatus_response("/D:propstat/D:prop/D:acl-restrictions/D:no-invert")).not_to be_empty
+        end
+      end
+    end
+  end
+
+  context "RFC 5397: WebDAV Current Principal Extension" do
+    it "[3] DAV:current-user-principal" do
+      propfind('/', :input => propfind_xml(:"current-user-principal"))
+      expect(multistatus_response("/D:propstat/D:prop/D:current-user-principal/D:href").first.text).to eq('/')
     end
   end
 end

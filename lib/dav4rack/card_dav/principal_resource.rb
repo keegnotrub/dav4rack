@@ -46,9 +46,11 @@ module DAV4Rack
             end
             xml.protected
             xml.grant do
-              xml.privilege "read"
-              xml.privilege "read-acl"
-              xml.privilege "read-current-user-privilege-set"
+              PRIVILEGES.each do |privilege|
+                xml.privilege do
+                  xml.send(privilege)
+                end
+              end
             end
           end
         end
