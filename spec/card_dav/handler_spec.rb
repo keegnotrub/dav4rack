@@ -7,14 +7,6 @@ RSpec.describe DAV4Rack::CardDAV::Handler do
   
   attr_reader :response
 
-  before do
-    @controller = DAV4Rack::CardDAV::Handler.new(
-      root_uri_path: "/",
-      resource_class: DAV4Rack::CardDAV::PrincipalResource,
-      home_set_path: "/books/"
-    )
-  end
-  
   def request(method, uri, options={})
     options = {
       'HTTP_HOST' => 'localhost',
@@ -49,20 +41,36 @@ RSpec.describe DAV4Rack::CardDAV::Handler do
   def multistatus_response(pattern)
     expect(@response).to be_multi_status
     expect(response_xml.xpath('//D:multistatus/D:response', response_xml.root.namespaces)).not_to be_empty
-    response_xml.xpath("//D:multistatus/D:response#{pattern}", response_xml.root.namespaces)    
+    response_xml.xpath("//D:multistatus/D:response#{pattern}", response_xml.collect_namespaces)
   end
-  
-  def propfind_xml(*props)
+
+  def carddav_propfind_xml(prop)
     render(:propfind) do |xml|
       xml.prop do
-        props.each do |prop|
-          xml.send(prop)
+        xml.send(prop, {'xmlns:C' => 'urn:ietf:params:xml:ns:carddav:'}) do
+          xml.parent.namespace = xml.parent.namespace_definitions.first
         end
       end
     end
   end
 
+  def propfind_xml(prop, carddav: false)
+    render(:propfind) do |xml|
+      xml.prop do
+        xml.send(prop)
+      end
+    end
+  end
+
   context "RFC 3744: WebDav Access Control Protocol" do
+    before do
+      @controller = DAV4Rack::CardDAV::Handler.new(
+        root_uri_path: "/",
+        resource_class: DAV4Rack::CardDAV::PrincipalResource,
+        home_set_path: "/books/"
+      )
+    end
+    
     describe '[4] Principal Properties' do
       it '[4.2] DAV:principal-URL' do
         propfind('/', :input => propfind_xml(:"principal-URL"))
@@ -115,9 +123,46 @@ RSpec.describe DAV4Rack::CardDAV::Handler do
   end
 
   context "RFC 5397: WebDAV Current Principal Extension" do
+    before do
+      @controller = DAV4Rack::CardDAV::Handler.new(
+        root_uri_path: "/",
+        resource_class: DAV4Rack::CardDAV::PrincipalResource,
+        home_set_path: "/books/"
+      )
+    end
+    
     it "[3] DAV:current-user-principal" do
       propfind('/', :input => propfind_xml(:"current-user-principal"))
       expect(multistatus_response("/D:propstat/D:prop/D:current-user-principal/D:href").first.text).to eq('/')
+    end
+  end
+
+  context "RFC 6352: CardDAV" do
+    before do
+      @controller = DAV4Rack::CardDAV::Handler.new(
+        root_uri_path: "/",
+        resource_class: DAV4Rack::CardDAV::PrincipalResource,
+        home_set_path: "/books/"
+      )
+    end
+
+    describe "[6] Address Book Feature" do
+      it "[6.1] Address Book Support" do
+        expect(options("/")).to be_ok
+        expect(response.headers["Dav"]).to include("addressbook")
+      end
+    end
+
+    describe "[7] Address Book Access Control" do
+      it "[7.1.1] CARDDAV:addressbook-home-set" do
+        propfind('/', :input => carddav_propfind_xml(:"addressbook-home-set"))
+        expect(multistatus_response("/D:propstat/D:prop/C:addressbook-home-set/D:href").first.text).to eq('/books/')
+      end
+
+      it "[7.1.2] CARDDAV:principal-address" do        
+        propfind('/', :input => carddav_propfind_xml(:"principal-address"))
+        expect(multistatus_response("/D:propstat/D:prop/C:principal-address")).not_to be_empty
+      end
     end
   end
 end

@@ -31,6 +31,10 @@ module DAV4Rack
           Time.now
         when "resourcetype"
           [ :collection, :principal ]
+        when "addressbook-home-set"
+          addressbook_home_set
+        when "principal-address"
+          principal_address
         else
           super
         end
@@ -53,6 +57,19 @@ module DAV4Rack
               end
             end
           end
+        end
+      end
+
+      def addressbook_home_set
+        render_xml(:"addressbook-home-set", CARDDAV_XML_NAMESPACES) do |xml|
+          xml.href @options[:home_set_path]
+        end
+      end
+
+      def principal_address
+        render_xml(:"principal-address", CARDDAV_XML_NAMESPACES) do |xml|
+          # TODO
+          # xml.href current_user_vcard_url
         end
       end
     end

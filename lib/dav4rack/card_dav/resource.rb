@@ -2,6 +2,8 @@ module DAV4Rack
   module CardDAV
     class Resource < DAV4Rack::Resource
       PRIVILEGES = ["read", "read-acl", "read-current-user-privilege-set"].freeze
+      WEBDAV_XML_NAMESPACES = {'xmlns:D' => 'DAV:'}.freeze
+      CARDDAV_XML_NAMESPACES = {'xmlns:C' => 'urn:ietf:params:xml:ns:carddav:', 'xmlns:D' => 'DAV:'}.freeze
       
       def get_property(element)
         case element[:name]
@@ -18,7 +20,7 @@ module DAV4Rack
 
       protected
 
-      def render_xml(root_type = nil, xml_attributes = {'xmlns:D' => 'DAV:'})
+      def render_xml(root_type, xml_attributes = WEBDAV_XML_NAMESPACES)
         Nokogiri::XML::Builder.new do |xml_base|
           xml_base.send(root_type.to_s, xml_attributes.merge(root_xml_attributes)) do
             xml_base.parent.namespace = xml_base.parent.namespace_definitions.first
