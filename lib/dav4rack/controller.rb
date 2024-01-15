@@ -575,6 +575,14 @@ module DAV4Rack
                 ns_xml.send(element[:name]) do
                   ns_xml.send(value)
                 end
+              elsif(value.is_a?(URI))
+                ns_xml.send(element[:name]) do
+                  ns_xml.send(:href, value.to_s)
+                end
+              elsif(value.is_a?(Array))
+                ns_xml.send(element[:name]) do
+                  value.each { |v| ns_xml.send(v) }
+                end
               else
                 ns_xml.send(element[:name], value) do |x|
                   # Make sure we return valid XML
