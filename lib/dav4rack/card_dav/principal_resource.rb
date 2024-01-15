@@ -23,14 +23,6 @@ module DAV4Rack
           acl
         when "acl-restrictions"
           [ :"grant-only", :"no-invert" ]
-        when "displayname"
-          "Principal Resource"
-        when "creationdate"
-          Time.now
-        when "getlastmodified"
-          Time.now
-        when "resourcetype"
-          [ :collection, :principal ]
         when "addressbook-home-set"
           addressbook_home_set
         when "principal-address"
@@ -40,7 +32,23 @@ module DAV4Rack
         end
       end
 
-      private
+      def name
+        "principal"
+      end
+
+      def creation_date
+        Time.now
+      end
+
+      def last_modified
+        Time.now
+      end
+
+      def resource_type
+        [ :collection, :principal ]
+      end
+
+      protected
 
       def acl
         render_xml(:acl) do |xml|
@@ -62,7 +70,7 @@ module DAV4Rack
 
       def addressbook_home_set
         render_xml(:"addressbook-home-set", CARDDAV_XML_NAMESPACES) do |xml|
-          xml.href @options[:home_set_path]
+          xml.href "/lists/"
         end
       end
 
@@ -70,6 +78,7 @@ module DAV4Rack
         render_xml(:"principal-address", CARDDAV_XML_NAMESPACES) do |xml|
           # TODO
           # xml.href current_user_vcard_url
+          xml.unauthenticated
         end
       end
     end

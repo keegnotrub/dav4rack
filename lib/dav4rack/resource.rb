@@ -403,13 +403,21 @@ module DAV4Rack
       new_path = path.dup
       new_path = new_path + '/' unless new_path[-1,1] == '/'
       new_path = '/' + new_path unless new_path[0,1] == '/'
-      self.class.new("#{new_public}#{name}", "#{new_path}#{name}", request, response, options.merge(:user => @user))
+      child_resource.new("#{new_public}#{name}", "#{new_path}#{name}", request, response, options.merge(:user => @user))
+    end
+
+    def child_resource
+      self.class
+    end
+
+    def parent_resource
+      self.class
     end
     
     # Return parent of this resource
     def parent
       unless(@path.to_s.empty?)
-        self.class.new(
+        parent_resource.new(
           File.split(@public_path).first,
           File.split(@path).first,
           @request,

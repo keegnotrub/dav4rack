@@ -3,7 +3,7 @@ require "dav4rack/card_dav"
 require "debug"
 
 RSpec.describe DAV4Rack::CardDAV::Handler do
-  METHODS = %w(GET PUT POST DELETE PROPFIND PROPPATCH MKCOL COPY MOVE OPTIONS HEAD LOCK UNLOCK)  
+  METHODS = %w(GET PUT POST DELETE PROPFIND PROPPATCH MKCOL COPY MOVE OPTIONS HEAD LOCK UNLOCK REPORT)
   
   attr_reader :response
 
@@ -66,8 +66,7 @@ RSpec.describe DAV4Rack::CardDAV::Handler do
     before do
       @controller = DAV4Rack::CardDAV::Handler.new(
         root_uri_path: "/",
-        resource_class: DAV4Rack::CardDAV::PrincipalResource,
-        home_set_path: "/books/"
+        resource_class: DAV4Rack::CardDAV::PrincipalResource
       )
     end
     
@@ -120,14 +119,20 @@ RSpec.describe DAV4Rack::CardDAV::Handler do
         end
       end
     end
+
+    describe "[7] Access Control Feature" do
+      it "[7.2] Access Control Support" do
+        expect(options("/")).to be_ok
+        expect(response.headers["Dav"]).to include("access-control")
+      end
+    end
   end
 
   context "RFC 5397: WebDAV Current Principal Extension" do
     before do
       @controller = DAV4Rack::CardDAV::Handler.new(
         root_uri_path: "/",
-        resource_class: DAV4Rack::CardDAV::PrincipalResource,
-        home_set_path: "/books/"
+        resource_class: DAV4Rack::CardDAV::PrincipalResource
       )
     end
     
@@ -138,30 +143,89 @@ RSpec.describe DAV4Rack::CardDAV::Handler do
   end
 
   context "RFC 6352: CardDAV" do
-    before do
-      @controller = DAV4Rack::CardDAV::Handler.new(
-        root_uri_path: "/",
-        resource_class: DAV4Rack::CardDAV::PrincipalResource,
-        home_set_path: "/books/"
-      )
-    end
-
     describe "[6] Address Book Feature" do
+      before do
+        @controller = DAV4Rack::CardDAV::Handler.new(
+          root_uri_path: "/lists/",
+          resource_class: DAV4Rack::CardDAV::AddressBookResource,
+        )
+      end
+      
       it "[6.1] Address Book Support" do
         expect(options("/")).to be_ok
         expect(response.headers["Dav"]).to include("addressbook")
       end
+
+      it "[6.2.1] CARDDAV:addressbook-description" do
+        propfind('/lists/default', :input => carddav_propfind_xml(:"addressbook-description"))
+        expect(multistatus_response("/D:propstat/D:prop/C:addressbook-description").first.text).to eq('default')
+      end
+
+      it "[6.2.2] CARDAV:supported-address-data" do
+        propfind('/lists/default', :input => carddav_propfind_xml(:"supported-address-data"))
+        expect(multistatus_response("/D:propstat/D:prop/C:supported-address-data/C:address-data-type")).not_to be_empty
+      end
     end
 
     describe "[7] Address Book Access Control" do
+      before do
+        @controller = DAV4Rack::CardDAV::Handler.new(
+          root_uri_path: "/",
+          resource_class: DAV4Rack::CardDAV::PrincipalResource,
+        )
+      end
+      
       it "[7.1.1] CARDDAV:addressbook-home-set" do
         propfind('/', :input => carddav_propfind_xml(:"addressbook-home-set"))
-        expect(multistatus_response("/D:propstat/D:prop/C:addressbook-home-set/D:href").first.text).to eq('/books/')
+        expect(multistatus_response("/D:propstat/D:prop/C:addressbook-home-set/D:href").first.text).to eq('/lists/')
       end
 
       it "[7.1.2] CARDDAV:principal-address" do        
         propfind('/', :input => carddav_propfind_xml(:"principal-address"))
-        expect(multistatus_response("/D:propstat/D:prop/C:principal-address")).not_to be_empty
+        expect(multistatus_response("/D:propstat/D:prop/C:principal-address/D:unauthenticated")).not_to be_empty
+      end
+    end
+
+    describe "[8] Address Book Reports" do
+      before do
+        @controller = DAV4Rack::CardDAV::Handler.new(
+          root_uri_path: "/lists/",
+          resource_class: DAV4Rack::CardDAV::AddressBookResource,
+        )
+      end
+
+      it "[8.3.1] CARDDAV:supported-collation-set" do
+        propfind('/lists/default', :input => carddav_propfind_xml(:"supported-collation-set"))
+        expect(multistatus_response("/D:propstat/D:prop/C:supported-collation-set/C:supported-collation").map(&:text)).to match(['i;ascii-casemap', 'i;unicode-casemap'])
+      end
+
+      it "[8.6] CARDDAV:addressbook-query" do
+        # TODO
+        # report('/lists/default', :input => carddav_report_xml(:"addressbook-query"))
+        # @response.body
+      end
+
+      it "[8.7] CARDDAV:addressbook-multiget" do
+        # TODO
+        # report('/lists/default', :input => carddav_report_xml(:"addressbook-multiget"))
+        # @response.body
+      end
+    end
+  end
+
+  context "RFC 3253: Versioning Extensions to WebDAV" do
+    describe "[3] Version-Control Feature" do
+      before do
+        @controller = DAV4Rack::CardDAV::Handler.new(
+          root_uri_path: "/lists/",
+          resource_class: DAV4Rack::CardDAV::AddressBookResource,
+        )
+      end
+
+      it "[3.1.5] DAV:supported-report-set" do
+        propfind('/lists/default', :input => propfind_xml(:"supported-report-set"))
+        expect(multistatus_response("/D:propstat/D:prop/D:supported-report-set/D:report/C:addressbook-multiget")).not_to be_empty
+        expect(multistatus_response("/D:propstat/D:prop/D:supported-report-set/D:report/C:addressbook-query")).not_to be_empty
       end
     end
   end
